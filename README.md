@@ -1,2 +1,2 @@
 # ChainAlchemy 
-[![codecov](https://codecov.io/gh/hamdi3/ChainAlchemy/branch/dev/graph/badge.svg)](https://codecov.io/gh/hamdi3/ChainAlchemy/branch/dev)
+[![codecov](https://codecov.io/gh/hamdi3/ChainAlchemy/branch/main/graph/badge.svg)](https://codecov.io/gh/hamdi3/ChainAlchemy/branch/main)
