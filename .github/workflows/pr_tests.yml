@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+  push:
+    branches:
+      - main
+
 jobs:
   test:
     # Specify the self-hosted runner with the appropriate tags
