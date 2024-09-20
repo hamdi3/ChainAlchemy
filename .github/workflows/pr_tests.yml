@@ -9,8 +9,7 @@ on:
 jobs:
   test:
     # Specify the self-hosted runner with the appropriate tags
-    runs-on: self-hosted
-    tags: 
+    runs-on:
       - Linux
       - X64
       - ChainAlchemy
