@@ -1,4 +1,4 @@
-name: Run Tests on Pull Request
+name: Run tests and collect coverage on Pull Request
 
 on:
   # Trigger the workflow when a Pull Request is opened or synchronized targeting the 'main' branch
@@ -18,7 +18,7 @@ jobs:
     steps:
     # Step 1: Checkout the repository
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Step 2: Set up Python
     - name: Set up Python
@@ -35,4 +35,11 @@ jobs:
     # Step 4: Run tests using pytest
     - name: Run tests with coverage
       run: |
-        pytest --cov=src tests/
+        pytest --cov --cov-report=xml
+
+    # Step 5: Upload coverage report to Codecov
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true  #fail the job if Codecov fails
