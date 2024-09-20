@@ -20,13 +20,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Step 2: Install dependencies (from requirements.txt)
+    # Step 3: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.3'
+  
+    # Step e: Install dependencies (from requirements.txt)
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Step 3: Run tests using pytest
+    # Step r: Run tests using pytest
     - name: Run tests
       run: |
         pytest
