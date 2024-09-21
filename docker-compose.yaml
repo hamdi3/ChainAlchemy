@@ -1,0 +1,22 @@
+version: '0.1'
+
+services:
+  # Service for running tests
+  test:
+    build: .
+    command: ["pytest"]
+    environment:
+      FLASK_ENV: testing
+
+  # Service for running the Flask app (depends on the test service)
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: development
+    volumes:
+      - .:/app
+    depends_on:
+      test:
+        condition: service_completed_successfully  # Only start web if tests passed
