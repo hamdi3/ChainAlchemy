@@ -1,4 +1,4 @@
-name: Run tests and collect coverage on Pull Request
+name: Unit & Coverage Tests
 
 on:
   # Trigger the workflow when a Pull Request is opened or synchronized targeting the 'main' branch
