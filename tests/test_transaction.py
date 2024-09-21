@@ -31,6 +31,18 @@ class TestTransaction(unittest.TestCase):
                          self.recipient_address)
         self.assertEqual(self.transaction.value, self.value)
 
+    def test_getattr_existing_attribute(self):
+        # Test accessing an existing attribute via __getattr__
+        self.assertEqual(self.transaction.sender_address, 'sender_address_123')
+        self.assertEqual(self.transaction.recipient_address,
+                         'recipient_address_456')
+        self.assertEqual(self.transaction.value, 100)
+
+    def test_getattr_non_existing_attribute(self):
+        # Test accessing a non-existing attribute via __getattr__
+        with self.assertRaises(AttributeError):
+            non_existent = self.transaction.non_existent_attr
+
     def test_to_dict(self):
         # Test the to_dict method
         expected_dict = OrderedDict({

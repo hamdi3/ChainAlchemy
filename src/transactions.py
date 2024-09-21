@@ -14,7 +14,11 @@ class Transaction:
         self.value = value
 
     def __getattr__(self, attr):
-        return self.data[attr]
+        if attr in self.__dict__:
+            return self.__dict__[attr]
+        else:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
     def to_dict(self):
         return OrderedDict({'sender_address': self.sender_address,
