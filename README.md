@@ -4,3 +4,5 @@
 ![Python Version](https://img.shields.io/badge/python-3.12-blue?logo=python)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg?logo=unlicense)](https://unlicense.org/)
 ![Flask](https://img.shields.io/badge/Flask-3.0.3-red.svg?logo=flask)
+![Docker](https://img.shields.io/badge/docker-085E8A.svg?logo=docker&logoColor=white)
+
