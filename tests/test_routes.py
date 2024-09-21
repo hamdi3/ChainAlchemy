@@ -162,6 +162,60 @@ class TestRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response_json['error'], 'Insufficient balance.')
 
+    # Patch the wallets dictionary with an empty dictionary
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
+    def test_generate_transaction_sender_address_not_exist(self):
+        # Add a mock wallet for the recipient only
+        from src.app.routes import wallets  # Import wallets after patching
+        wallets['recipient_address_456'] = {
+            'private_key': 'private_key_xyz456', 'balance': 50}
+
+        # Mock form data for the POST request
+        form_data = {
+            'sender_address': 'non_existent_sender',
+            'sender_private_key': 'private_key_abc123',
+            'recipient_address': 'recipient_address_456',
+            'amount': '100'
+        }
+
+        # Send POST request to /generate/transaction route
+        response = self.client.post('/generate/transaction', data=form_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response_json['error'],
+                         'Sender address does not exist.')
+
+    # Patch the wallets dictionary with an empty dictionary
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
+    def test_generate_transaction_recipient_address_not_exist(self):
+        # Add a mock wallet for the sender only
+        from src.app.routes import wallets  # Import wallets after patching
+        wallets['sender_address_123'] = {
+            'private_key': 'private_key_abc123', 'balance': 200}
+
+        # Mock form data for the POST request
+        form_data = {
+            'sender_address': 'sender_address_123',
+            'sender_private_key': 'private_key_abc123',
+            'recipient_address': 'non_existent_recipient',
+            'amount': '100'
+        }
+
+        # Send POST request to /generate/transaction route
+        response = self.client.post('/generate/transaction', data=form_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response_json['error'],
+                         'Recipient address does not exist.')
+
 
 if __name__ == '__main__':
     unittest.main()
