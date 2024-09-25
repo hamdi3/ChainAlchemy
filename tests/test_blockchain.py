@@ -2,7 +2,6 @@ import os
 import sys
 import unittest
 import binascii
-from unittest.mock import MagicMock, patch
 from uuid import uuid4
 from Crypto.PublicKey import RSA
 import requests
@@ -18,7 +17,7 @@ class TestBlockchain(unittest.TestCase):
 
     def setUp(self):
         self.blockchain = Blockchain()
-        self.private_key = RSA.generate(1024)
+        self.private_key = RSA.generate(1024) # while RSA key sizes below 2048 bits are considered breakable, this is for test only.
         self.public_key = self.private_key.publickey()
         self.sender_private_key = binascii.hexlify(self.private_key.exportKey(format='DER')).decode('ascii')
         self.sender_address = binascii.hexlify(self.public_key.exportKey(format='DER')).decode('ascii')
@@ -116,7 +115,6 @@ class TestBlockchain(unittest.TestCase):
 
 
     def test_create_block(self):
-        previous_block = self.blockchain.chain[-1]
         block = self.blockchain.create_block(nonce=12345, previous_hash='abcd')
 
         self.assertEqual(block['block_number'], 2)
