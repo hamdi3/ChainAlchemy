@@ -71,6 +71,7 @@ def new_transaction():
     sender_address = data['sender_address']
     sender_private_key = data['sender_private_key']
     recipient_address = data['recipient_address']
+
     try:
         amount = float(data['amount'])
     except ValueError:
