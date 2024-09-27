@@ -86,12 +86,12 @@ class TestRoutes(unittest.TestCase):
         wallets['recipient_address_456'] = {
             'private_key': 'private_key_xyz456', 'balance': 50.0}
 
-        # Mock form data for the POST request
-        form_data = {
+        # Mock JSON data for the POST request
+        json_data = {
             'sender_address': 'sender_address_123',
             'sender_private_key': 'private_key_abc123',
             'recipient_address': 'recipient_address_456',
-            'amount': '100.0'
+            'amount': 100.0
         }
 
         # Mock balance check to return enough balance
@@ -100,8 +100,8 @@ class TestRoutes(unittest.TestCase):
         # Mock transaction submission success
         mock_submit_transaction.return_value = 1
 
-        # Send POST request to /transactions/new route
-        response = self.client.post('/transactions/new', data=form_data)
+        # Send POST request to /transactions/new route with JSON data
+        response = self.client.post('/transactions/new', json=json_data)
 
         # Parse the JSON response
         response_json = response.get_json()
@@ -125,6 +125,51 @@ class TestRoutes(unittest.TestCase):
 
     @patch.dict('src.app.routes.wallets', {}, clear=True)
     @patch('src.app.routes.blockchain.get_available_balance')
+    @patch('src.app.routes.blockchain.submit_transaction')
+    def test_new_transaction_missing_fields(self, mock_submit_transaction, mock_get_available_balance):
+        # Test missing fields
+        json_data = {
+            'sender_address': 'sender_address_123',
+            'recipient_address': 'recipient_address_456',
+            # 'amount' and 'sender_private_key' are missing
+        }
+
+        # Send POST request with missing fields
+        response = self.client.post('/transactions/new', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Missing required field: sender_private_key')
+
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
+    @patch('src.app.routes.blockchain.get_available_balance')
+    @patch('src.app.routes.blockchain.submit_transaction')
+    def test_new_transaction_invalid_amount(self, mock_submit_transaction, mock_get_available_balance):
+        # Test invalid amount
+        json_data = {
+            'sender_address': 'sender_address_123',
+            'sender_private_key': 'private_key_abc123',
+            'recipient_address': 'recipient_address_456',
+            'amount': 'invalid_amount'  # Invalid non-numeric amount
+        }
+
+        # Send POST request with invalid amount
+        response = self.client.post('/transactions/new', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Amount must be a number.')
+
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
+    @patch('src.app.routes.blockchain.get_available_balance')
     def test_new_transaction_insufficient_balance(self, mock_get_available_balance):
         # Set up wallets with low balance for the sender
         from src.app.routes import wallets  # Import wallets after patching
@@ -133,19 +178,19 @@ class TestRoutes(unittest.TestCase):
         wallets['recipient_address_456'] = {
             'private_key': 'private_key_xyz456', 'balance': 50.0}
 
-        # Mock form data for the POST request
-        form_data = {
+        # Mock JSON data for the POST request
+        json_data = {
             'sender_address': 'sender_address_123',
             'sender_private_key': 'private_key_abc123',
             'recipient_address': 'recipient_address_456',
-            'amount': '100.0'  # More than sender's balance
+            'amount': 100.0  # More than sender's balance
         }
 
         # Mock balance check to return insufficient balance
         mock_get_available_balance.return_value = 50.0
 
-        # Send POST request to /transactions/new route
-        response = self.client.post('/transactions/new', data=form_data)
+        # Send POST request to /transactions/new route with JSON data
+        response = self.client.post('/transactions/new', json=json_data)
 
         # Parse the JSON response
         response_json = response.get_json()
@@ -163,16 +208,16 @@ class TestRoutes(unittest.TestCase):
         wallets['recipient_address_456'] = {
             'private_key': 'private_key_xyz456', 'balance': 50.0}
 
-        # Mock form data for the POST request
-        form_data = {
+        # Mock JSON data for the POST request
+        json_data = {
             'sender_address': 'non_existent_sender',
             'sender_private_key': 'private_key_abc123',
             'recipient_address': 'recipient_address_456',
-            'amount': '100.0'
+            'amount': 100.0
         }
 
-        # Send POST request to /transactions/new route
-        response = self.client.post('/transactions/new', data=form_data)
+        # Send POST request to /transactions/new route with JSON data
+        response = self.client.post('/transactions/new', json=json_data)
 
         # Parse the JSON response
         response_json = response.get_json()
@@ -187,22 +232,58 @@ class TestRoutes(unittest.TestCase):
         wallets['sender_address_123'] = {
             'private_key': 'private_key_abc123', 'balance': 200.0}
 
-        # Mock form data for the POST request
-        form_data = {
+        # Mock JSON data for the POST request
+        json_data = {
             'sender_address': 'sender_address_123',
             'sender_private_key': 'private_key_abc123',
             'recipient_address': 'non_existent_recipient',
-            'amount': '100.0'
+            'amount': 100.0
         }
 
-        # Send POST request to /transactions/new route
-        response = self.client.post('/transactions/new', data=form_data)
+        # Send POST request to /transactions/new route with JSON data
+        response = self.client.post('/transactions/new', json=json_data)
 
         # Parse the JSON response
         response_json = response.get_json()
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response_json['error'],
                          'Recipient address does not exist.')
+
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
+    @patch('src.app.routes.blockchain.get_available_balance')
+    @patch('src.app.routes.blockchain.submit_transaction')
+    def test_new_transaction_invalid_transaction(self, mock_submit_transaction, mock_get_available_balance):
+        # Set up wallets with balances
+        from src.app.routes import wallets  # Import wallets after patching
+        wallets['sender_address_123'] = {
+            'private_key': 'private_key_abc123', 'balance': 200.0}
+        wallets['recipient_address_456'] = {
+            'private_key': 'private_key_xyz456', 'balance': 50.0}
+
+        # Mock balance check to return enough balance
+        mock_get_available_balance.return_value = 200.0
+
+        # Mock transaction submission to return None (indicating invalid transaction)
+        mock_submit_transaction.return_value = None
+
+        # Mock JSON data for the POST request
+        json_data = {
+            'sender_address': 'sender_address_123',
+            'sender_private_key': 'private_key_abc123',
+            'recipient_address': 'recipient_address_456',
+            'amount': 100.0
+        }
+
+        # Send POST request to /transactions/new route with JSON data
+        response = self.client.post('/transactions/new', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 406)
+        self.assertIn('message', response_json)
+        self.assertEqual(response_json['message'], 'Invalid Transaction!')
 
     @patch.dict('src.app.routes.wallets', {}, clear=True)
     @patch('src.app.routes.blockchain.proof_of_work')
@@ -214,8 +295,8 @@ class TestRoutes(unittest.TestCase):
         wallets['miner_address_123'] = {
             'private_key': 'private_key_abc123', 'balance': 0.0}
 
-        # Mock form data for the POST request
-        form_data = {
+        # Mock JSON data for the POST request
+        json_data = {
             'miner_address': 'miner_address_123'
         }
 
@@ -233,8 +314,8 @@ class TestRoutes(unittest.TestCase):
         # Mock the transaction submission
         mock_submit_transaction.return_value = True
 
-        # Send POST request to /mine route
-        response = self.client.post('/mine', data=form_data)
+        # Send POST request to /mine route with JSON data
+        response = self.client.post('/mine', json=json_data)
 
         # Parse the JSON response
         response_json = response.get_json()
@@ -256,32 +337,91 @@ class TestRoutes(unittest.TestCase):
         mock_proof_of_work.assert_called_once()
         mock_create_block.assert_called_once_with(123, previous_hash)
 
-
+    @patch.dict('src.app.routes.wallets', {}, clear=True)
     @patch('src.app.routes.blockchain.proof_of_work')
     @patch('src.app.routes.blockchain.create_block')
-    def test_mine_no_transactions(self, mock_create_block, mock_proof_of_work):
-        # Mock the proof_of_work and create_block methods
-        mock_proof_of_work.return_value = 123  # Mocked nonce
-        mock_create_block.return_value = {
-            'block_number': 2,
-            'transactions': [],  # No transactions in the block
-            'nonce': 123,
-            'previous_hash': 'abcd1234'
+    @patch('src.app.routes.blockchain.submit_transaction')
+    def test_mine_missing_miner_address(self, mock_submit_transaction, mock_create_block, mock_proof_of_work):
+        # Test missing miner_address in the JSON payload
+        json_data = {}  # No miner_address provided
+
+        # Send POST request to /mine route with missing miner_address
+        response = self.client.post('/mine', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Missing required field: miner_address')
+
+    def test_register_node(self):
+        # Mock JSON data for the POST request
+        json_data = {
+            'nodes': ['http://localhost:5001', 'http://localhost:5002']
         }
 
-        # Mock form data for the POST request with a valid miner address
-        form_data = {
-            'miner_address': 'miner_address_123'
-        }
-
-        # Send POST request to /mine route
-        response = self.client.post('/mine', data=form_data)
+        # Simulate POST request to register new nodes
+        response = self.client.post('/nodes/register', json=json_data)
 
         # Validate the response status code and content
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         response_json = response.get_json()
-        self.assertEqual(response_json['message'], 'New Block Forged')
-        self.assertEqual(response_json['transactions'], [])
+        self.assertIn('total_nodes', response_json)
+        self.assertEqual(len(response_json['total_nodes']), 2)
+
+    @patch('src.app.routes.blockchain.register_node')  # Mock the register_node method
+    def test_register_nodes_missing_field(self, mock_register_node):
+        # Test when 'nodes' field is missing in the JSON payload
+        json_data = {}  # No 'nodes' field provided
+
+        # Send POST request to /nodes/register route with missing 'nodes'
+        response = self.client.post('/nodes/register', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Missing or invalid required field: nodes (must be a non-empty list)')
+
+    @patch('src.app.routes.blockchain.register_node')  # Mock the register_node method
+    def test_register_nodes_invalid_field_type(self, mock_register_node):
+        # Test when 'nodes' field is not a list
+        json_data = {
+            'nodes': 'not_a_list'  # Invalid type
+        }
+
+        # Send POST request to /nodes/register route with invalid 'nodes' field type
+        response = self.client.post('/nodes/register', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Missing or invalid required field: nodes (must be a non-empty list)')
+
+    @patch('src.app.routes.blockchain.register_node')  # Mock the register_node method
+    def test_register_nodes_empty_list(self, mock_register_node):
+        # Test when 'nodes' field is an empty list
+        json_data = {
+            'nodes': []  # Empty list
+        }
+
+        # Send POST request to /nodes/register route with empty 'nodes' field
+        response = self.client.post('/nodes/register', json=json_data)
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and error message
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('error', response_json)
+        self.assertEqual(response_json['error'], 'Missing or invalid required field: nodes (must be a non-empty list)')
 
     @patch('src.app.routes.blockchain.resolve_conflicts')
     def test_resolve_conflicts(self, mock_resolve_conflicts):
@@ -298,21 +438,180 @@ class TestRoutes(unittest.TestCase):
         self.assertIn('new_chain', response_json)
         self.assertEqual(response_json['message'], 'Our chain was replaced')
 
-    def test_register_node(self):
-        # Mock form data for the POST request
-        form_data = {
-            'nodes': 'http://localhost:5001, http://localhost:5002'
-        }
+    @patch('src.app.routes.blockchain.resolve_conflicts')  # Mock resolve_conflicts method
+    @patch('src.app.routes.blockchain.chain', new_callable=list)  # Mock blockchain.chain
+    def test_consensus_authoritative_chain(self, mock_chain, mock_resolve_conflicts):
+        # Simulate the chain being authoritative (not replaced)
+        mock_resolve_conflicts.return_value = False
 
-        # Simulate POST request to register new nodes
-        response = self.client.post('/nodes/register', data=form_data)
+        # Simulate a blockchain with a few blocks
+        mock_chain.extend([
+            {
+                'block_number': 1,
+                'transactions': [],
+                'nonce': 1234,
+                'previous_hash': 'abcd1234'
+            },
+            {
+                'block_number': 2,
+                'transactions': [{'sender': 'sender_1', 'recipient': 'recipient_1', 'amount': 50.0}],
+                'nonce': 5678,
+                'previous_hash': 'abcd5678'
+            }
+        ])
+
+        # Send GET request to /nodes/resolve route
+        response = self.client.get('/nodes/resolve')
+
+        # Parse the JSON response
+        response_json = response.get_json()
 
         # Validate the response status code and content
-        self.assertEqual(response.status_code, 201)
-        response_json = response.get_json()
-        self.assertIn('total_nodes', response_json)
-        self.assertEqual(len(response_json['total_nodes']), 2)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('message', response_json)
+        self.assertEqual(response_json['message'], 'Our chain is authoritative')
 
+        # Check that the chain is returned correctly in the response
+        self.assertIn('chain', response_json)
+        self.assertEqual(len(response_json['chain']), 2)
+        self.assertEqual(response_json['chain'][0]['block_number'], 1)
+        self.assertEqual(response_json['chain'][1]['block_number'], 2)
+
+    @patch('src.app.routes.blockchain.nodes', new_callable=set)
+    def test_get_nodes(self, mock_nodes):
+        # Simulate some nodes in the blockchain
+        mock_nodes.update({'http://localhost:5001', 'http://localhost:5002'})
+
+        # Send GET request to /nodes/get route
+        response = self.client.get('/nodes/get')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('nodes', response_json)
+        self.assertEqual(len(response_json['nodes']), 2)
+        self.assertIn('http://localhost:5001', response_json['nodes'])
+        self.assertIn('http://localhost:5002', response_json['nodes'])
+
+    @patch('src.app.routes.blockchain.nodes', new_callable=set)
+    def test_get_nodes_empty(self, mock_nodes):
+        # Simulate an empty set of nodes
+        mock_nodes.clear()
+
+        # Send GET request to /nodes/get route
+        response = self.client.get('/nodes/get')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('nodes', response_json)
+        self.assertEqual(len(response_json['nodes']), 0)  # No nodes in the blockchain
+
+    @patch('src.app.routes.blockchain.transactions', new_callable=list)
+    def test_get_transactions(self, mock_transactions):
+        # Simulate some transactions in the blockchain
+        mock_transactions.extend([
+            {'sender': 'sender_1', 'recipient': 'recipient_1', 'amount': 50.0},
+            {'sender': 'sender_2', 'recipient': 'recipient_2', 'amount': 100.0}
+        ])
+
+        # Send GET request to /transactions/get route
+        response = self.client.get('/transactions/get')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('transactions', response_json)
+        self.assertEqual(len(response_json['transactions']), 2)
+
+        # Validate transaction details
+        self.assertEqual(response_json['transactions'][0]['sender'], 'sender_1')
+        self.assertEqual(response_json['transactions'][0]['recipient'], 'recipient_1')
+        self.assertEqual(response_json['transactions'][0]['amount'], 50.0)
+
+        self.assertEqual(response_json['transactions'][1]['sender'], 'sender_2')
+        self.assertEqual(response_json['transactions'][1]['recipient'], 'recipient_2')
+        self.assertEqual(response_json['transactions'][1]['amount'], 100.0)
+
+    @patch('src.app.routes.blockchain.transactions', new_callable=list)
+    def test_get_transactions_empty(self, mock_transactions):
+        # Simulate no transactions in the blockchain
+        mock_transactions.clear()
+
+        # Send GET request to /transactions/get route
+        response = self.client.get('/transactions/get')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('transactions', response_json)
+        self.assertEqual(len(response_json['transactions']), 0)  # No transactions in the pool
+
+    @patch('src.app.routes.blockchain.chain', new_callable=list)
+    def test_full_chain(self, mock_chain):
+        # Simulate a blockchain with a few blocks
+        mock_chain.extend([
+            {
+                'block_number': 1,
+                'transactions': [],
+                'nonce': 1234,
+                'previous_hash': 'abcd1234'
+            },
+            {
+                'block_number': 2,
+                'transactions': [{'sender': 'sender_1', 'recipient': 'recipient_1', 'amount': 50.0}],
+                'nonce': 5678,
+                'previous_hash': 'abcd5678'
+            }
+        ])
+
+        # Send GET request to /chain route
+        response = self.client.get('/chain')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('chain', response_json)
+        self.assertEqual(len(response_json['chain']), 2)
+        self.assertEqual(response_json['length'], 2)
+
+        # Validate block details
+        self.assertEqual(response_json['chain'][0]['block_number'], 1)
+        self.assertEqual(response_json['chain'][1]['block_number'], 2)
+        self.assertEqual(response_json['chain'][1]['transactions'][0]['sender'], 'sender_1')
+
+    @patch('src.app.routes.blockchain.chain', new_callable=list)
+    def test_full_chain_empty(self, mock_chain):
+        # Simulate an empty blockchain
+        mock_chain.clear()
+
+        # Send GET request to /chain route
+        response = self.client.get('/chain')
+
+        # Parse the JSON response
+        response_json = response.get_json()
+
+        # Validate the response status code and content
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('chain', response_json)
+        self.assertEqual(len(response_json['chain']), 0)
+        self.assertEqual(response_json['length'], 0)
+
+    def test_swagger_ui(self):
+        # Test the Swagger UI route and follow redirects
+        response = self.client.get('/swagger', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"<title>ChainAlchemy API Documentation</title>", response.data)
 
 if __name__ == '__main__':
     unittest.main()
