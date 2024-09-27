@@ -2,8 +2,22 @@ import binascii
 import Crypto
 from Crypto.PublicKey import RSA
 from flask import Blueprint, jsonify, request
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from blockchain import Blockchain, MINING_REWARD, MINING_SENDER
+
+
+# Swagger UI setup
+SWAGGER_URL = '/swagger'
+API_URL = '/static/openapi.yaml'  # OpenAPI specification location
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,  # Swagger UI served at /swagger
+    API_URL,      # OpenAPI specification served at /static/openapi.yaml
+    config={      # Swagger UI configuration
+        'app_name': "ChainAlchemy API Documentation"
+    }
+)
 
 
 bp = Blueprint('routes', __name__)
@@ -45,10 +59,22 @@ def new_wallet():
 
 @bp.route('/transactions/new', methods=['POST'])
 def new_transaction():
-    sender_address = request.form['sender_address']
-    sender_private_key = request.form['sender_private_key']
-    recipient_address = request.form['recipient_address']
-    amount = float(request.form['amount'])
+    # Parse JSON payload
+    data = request.get_json()
+
+    # Ensure all required fields are present in the JSON body
+    required_fields = ['sender_address', 'sender_private_key', 'recipient_address', 'amount']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f"Missing required field: {field}"}), 400
+
+    sender_address = data['sender_address']
+    sender_private_key = data['sender_private_key']
+    recipient_address = data['recipient_address']
+    try:
+        amount = float(data['amount'])
+    except ValueError:
+        return jsonify({'error': 'Amount must be a number.'}), 400
 
     # Dynamically calculate the sender's balance
     sender_balance = blockchain.get_available_balance(address=sender_address)
@@ -99,7 +125,14 @@ def full_chain():
 
 @bp.route('/mine', methods=['POST'])
 def mine():
-    miner_address = request.form['miner_address']
+    # Parse JSON payload
+    data = request.get_json()
+
+    # Ensure the 'miner_address' field is present
+    if 'miner_address' not in data:
+        return jsonify({'error': 'Missing required field: miner_address'}), 400
+
+    miner_address = data['miner_address']
 
     # We run the proof of work algorithm to get the next proof...
     last_block = blockchain.chain[-1]
@@ -130,12 +163,16 @@ def mine():
 
 @bp.route('/nodes/register', methods=['POST'])
 def register_nodes():
-    values = request.form
-    nodes = values.get('nodes').replace(" ", "").split(',')
+    # Parse JSON payload
+    data = request.get_json()
 
-    if nodes is None:
-        return "Error: Please supply a valid list of nodes", 400
+    # Ensure the 'nodes' field is present and valid
+    if 'nodes' not in data or not isinstance(data['nodes'], list) or len(data['nodes']) == 0:
+        return jsonify({'error': 'Missing or invalid required field: nodes (must be a non-empty list)'}), 400
 
+    nodes = data['nodes']
+
+    # Register each node in the blockchain
     for node in nodes:
         blockchain.register_node(node)
 

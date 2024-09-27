@@ -1,0 +1,243 @@
+openapi: 3.0.0
+info:
+  title: ChainAlchemy API
+  description: This API allows interaction with the blockchain network, including wallet creation, transactions, mining, and node management.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000
+
+paths:
+  /:
+    get:
+      summary: Home route
+      description: A simple welcome message from the API.
+      responses:
+        '200':
+          description: A welcome message from Flask.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Welcome to Flask!
+
+  /wallet/new:
+    post:
+      summary: Create a new wallet
+      description: Generates a new RSA key pair and stores the wallet in the system with an initial balance of 0.
+      responses:
+        '200':
+          description: The newly generated wallet, including private and public keys.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  private_key:
+                    type: string
+                    description: The private key for the wallet.
+                  public_key:
+                    type: string
+                    description: The public key for the wallet.
+
+  /transactions/new:
+    post:
+      summary: Submit a new transaction
+      description: Submits a transaction between two wallets, transferring a specific amount from the sender to the recipient.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sender_address:
+                  type: string
+                  description: The sender's public key.
+                sender_private_key:
+                  type: string
+                  description: The sender's private key.
+                recipient_address:
+                  type: string
+                  description: The recipient's public key.
+                amount:
+                  type: number
+                  description: The amount to be transferred.
+      responses:
+        '201':
+          description: The transaction will be added to the blockchain.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Transaction will be added to Block 1
+        '400':
+          description: Error due to insufficient balance or invalid addresses.
+        '406':
+          description: Invalid transaction.
+
+  /transactions/get:
+    get:
+      summary: Get all pending transactions
+      description: Retrieves the list of pending transactions from the transactions pool.
+      responses:
+        '200':
+          description: A list of pending transactions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sender:
+                          type: string
+                        recipient:
+                          type: string
+                        amount:
+                          type: number
+
+  /chain:
+    get:
+      summary: Retrieve the full blockchain
+      description: Returns the full blockchain, including all blocks.
+      responses:
+        '200':
+          description: A JSON object containing the entire blockchain.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chain:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        block_number:
+                          type: integer
+                        transactions:
+                          type: array
+                          items:
+                            type: object
+                        nonce:
+                          type: integer
+                        previous_hash:
+                          type: string
+                  length:
+                    type: integer
+                    description: The number of blocks in the chain.
+
+  /mine:
+    post:
+      summary: Mine a new block
+      description: Mines a new block using proof of work, adding it to the blockchain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                miner_address:
+                  type: string
+                  description: The public key of the miner who will receive the mining reward.
+      responses:
+        '200':
+          description: A JSON object containing details of the newly forged block.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "New Block Forged"
+                  block_number:
+                    type: integer
+                  transactions:
+                    type: array
+                    items:
+                      type: object
+                  nonce:
+                    type: integer
+                  previous_hash:
+                    type: string
+                  miner_balance:
+                    type: number
+
+  /nodes/register:
+    post:
+      summary: Register new nodes
+      description: Registers a list of new nodes to the blockchain network.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nodes:
+                  type: string
+                  description: A comma-separated list of node addresses.
+      responses:
+        '201':
+          description: A confirmation message showing the total nodes added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "New nodes have been added"
+                  total_nodes:
+                    type: array
+                    items:
+                      type: string
+
+  /nodes/resolve:
+    get:
+      summary: Resolve conflicts between nodes
+      description: Initiates the consensus algorithm to resolve conflicts and ensure the blockchain is consistent across nodes.
+      responses:
+        '200':
+          description: The chain was either replaced or found authoritative.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Our chain was replaced"
+                  new_chain:
+                    type: array
+                    items:
+                      type: object
+
+  /nodes/get:
+    get:
+      summary: Get all registered nodes
+      description: Retrieves a list of all nodes registered in the blockchain network.
+      responses:
+        '200':
+          description: A list of all registered nodes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: string
