@@ -6,21 +6,23 @@ from uuid import uuid4
 from Crypto.PublicKey import RSA
 import requests
 
-from src.blockchain import MINING_REWARD, Blockchain, MINING_SENDER  # Assuming you save your class in a file called blockchain.py
-
-
 sys.path.insert(0, os.path.abspath(
     # to solve import issues in src
     os.path.join(os.path.dirname(__file__), '../src')))
+
+from src.blockchain import MINING_REWARD, Blockchain, MINING_SENDER
 
 class TestBlockchain(unittest.TestCase):
 
     def setUp(self):
         self.blockchain = Blockchain()
-        self.private_key = RSA.generate(1024) # while RSA key sizes below 2048 bits are considered breakable, this is for test only.
+        # while RSA key sizes below 2048 bits are considered breakable, this is for test only.
+        self.private_key = RSA.generate(1024)
         self.public_key = self.private_key.publickey()
-        self.sender_private_key = binascii.hexlify(self.private_key.exportKey(format='DER')).decode('ascii')
-        self.sender_address = binascii.hexlify(self.public_key.exportKey(format='DER')).decode('ascii')
+        self.sender_private_key = binascii.hexlify(
+            self.private_key.exportKey(format='DER')).decode('ascii')
+        self.sender_address = binascii.hexlify(
+            self.public_key.exportKey(format='DER')).decode('ascii')
         self.recipient_address = str(uuid4()).replace('-', '')
 
     def test_register_node_valid(self):
@@ -34,7 +36,7 @@ class TestBlockchain(unittest.TestCase):
             '????',
             '####',
         ]
-        
+
         for url in invalid_urls:
             with self.assertRaises(ValueError):
                 self.blockchain.register_node(url)
@@ -108,18 +110,19 @@ class TestBlockchain(unittest.TestCase):
             self.sender_address, self.sender_private_key, self.recipient_address, 50)
 
         # Available balance should be confirmed balance + pending transaction amount
-        available_balance = self.blockchain.get_available_balance(self.recipient_address)
+        available_balance = self.blockchain.get_available_balance(
+            self.recipient_address)
 
         # The available balance should now be the mining reward + 50
         self.assertEqual(available_balance, confirmed_balance + 50)
-
 
     def test_create_block(self):
         block = self.blockchain.create_block(nonce=12345, previous_hash='abcd')
 
         self.assertEqual(block['block_number'], 2)
         self.assertEqual(block['previous_hash'], 'abcd')
-        self.assertEqual(len(block['transactions']), 0)  # Transactions list should be reset
+        # Transactions list should be reset
+        self.assertEqual(len(block['transactions']), 0)
         self.assertEqual(block['nonce'], 12345)
 
     def test_hash_block(self):
@@ -148,7 +151,8 @@ class TestBlockchain(unittest.TestCase):
     def test_valid_chain(self):
         # Create the first block (genesis block is already created)
         previous_block = self.blockchain.chain[-1]
-        previous_hash = self.blockchain.hash(previous_block)  # Correct previous hash
+        previous_hash = self.blockchain.hash(
+            previous_block)  # Correct previous hash
         nonce = self.blockchain.proof_of_work()  # Calculate valid nonce
 
         # Create a new block with valid nonce and previous hash
@@ -156,7 +160,6 @@ class TestBlockchain(unittest.TestCase):
 
         # Test if the blockchain is valid
         self.assertTrue(self.blockchain.valid_chain(self.blockchain.chain))
-
 
     def test_invalid_chain(self):
         # Submit a transaction to ensure the block has a transaction
@@ -172,11 +175,11 @@ class TestBlockchain(unittest.TestCase):
         self.blockchain.create_block(nonce=nonce, previous_hash=previous_hash)
 
         # Tamper with the chain by modifying the value of the transaction
-        self.blockchain.chain[1]['transactions'][0]['value'] = 999  # Tampering the chain
+        # Tampering the chain
+        self.blockchain.chain[1]['transactions'][0]['value'] = 999
 
         # Test if the chain is invalid
         self.assertFalse(self.blockchain.valid_chain(self.blockchain.chain))
-
 
     def test_resolve_conflicts(self):
         # Create another blockchain instance with a longer chain
@@ -187,7 +190,8 @@ class TestBlockchain(unittest.TestCase):
             previous_block = other_blockchain.chain[-1]
             previous_hash = other_blockchain.hash(previous_block)
             nonce = other_blockchain.proof_of_work()
-            other_blockchain.create_block(nonce=nonce, previous_hash=previous_hash)
+            other_blockchain.create_block(
+                nonce=nonce, previous_hash=previous_hash)
 
         # Simulate adding a node and that node providing the other blockchain
         self.blockchain.nodes.add('localhost:5000')  # Simulate another node
@@ -209,8 +213,6 @@ class TestBlockchain(unittest.TestCase):
 
         # Assert that our blockchain's chain is now the same as the other blockchain's chain
         self.assertEqual(self.blockchain.chain, other_blockchain.chain)
-
-
 
 if __name__ == '__main__':
     unittest.main()
