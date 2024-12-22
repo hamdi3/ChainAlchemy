@@ -10,9 +10,15 @@ from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
 from typing import OrderedDict
 
+from logging_config import setup_logging
+
+# Set up logging
+logger = setup_logging()
+
 MINING_SENDER = "THE BLOCKCHAIN"
 MINING_REWARD = 1.0
 MINING_DIFFICULTY = 2
+logger.debug("successfully initalized constants")
 
 
 class Blockchain:
@@ -26,6 +32,7 @@ class Blockchain:
         self.node_id = str(uuid4()).replace('-', '')
         # Create genesis block
         self.create_block(nonce=0, previous_hash='00')
+        logger.debug("successfully initalized Blockchain class parameters")
 
     def register_node(self, node_url):
         """
@@ -33,12 +40,16 @@ class Blockchain:
         """
         # Checking node_url has valid format
         parsed_url = urlparse(url=node_url)
+        logger.debug(f"Trying to add the following node: {parsed_url}")
         if parsed_url.netloc:
             self.nodes.add(parsed_url.netloc)
+            logger.info("Successfully added node")
         elif parsed_url.path:
             # Accepts an URL without scheme like '192.168.0.5:5000'.
             self.nodes.add(parsed_url.path)
+            logger.info("Successfully added node")
         else:
+            logger.warning(f"The given URL '{node_url}' is not valid")
             raise ValueError('Invalid URL')
 
     def sign_transaction(self, sender_private_key, transaction):
@@ -71,28 +82,46 @@ class Blockchain:
             'recipient_address': recipient_address,
             'value': value
         })
+        # Generate a random transaction id
+        transaction_id = str(uuid4()).replace('-', '')
+        logger.info(f"Initating Transaction {transaction_id}")
 
         # If it's a mining reward, skip the signature process
         if sender_address == MINING_SENDER:
+            logger.debug(f"Initating mining process for transaction {
+                         transaction_id}")
             self.transactions.append(transaction)
+            logger.info(f"Transaction {transaction_id} was successfull")
             return len(self.chain) + 1
 
         # Manages transactions from wallet to another wallet
         else:
+            logger.debug(f"Transaction {transaction_id} from sender adress ending with {
+                         sender_address[-3:]} to recipient adress ending with {recipient_address[-3:]}")
+            # Signing Transaction
+            logger.debug(f"Signing transaction {transaction_id}")
             transaction_signature = self.sign_transaction(
                 sender_private_key=sender_private_key,
                 transaction=transaction
             )
+            logger.debug(f"Successfully signed transaction {transaction_id}")
+
+            # Verifying Transaction
+            logger.debug(f"Verifying transaction {transaction_id}")
             transaction_verification = self.verify_transaction_signature(
                 sender_address=sender_address,
                 signature=transaction_signature,
                 transaction=transaction
             )
+            logger.debug(f"Successfully verfied transaction {transaction_id}")
 
             if transaction_verification:
                 self.transactions.append(transaction)
+                logger.info(f"Transaction {transaction_id} was successfull")
                 return len(self.chain) + 1
             else:
+                logger.warning(
+                    f"Transaction {transaction_id} wasn't successfull")
                 return False
 
     def get_balance(self, address):
@@ -101,6 +130,8 @@ class Blockchain:
         """
         balance = 0.0
 
+        logger.debug(f"Calculating balance for the wallet ending with '{
+                     address[-3:]}'")
         # Iterate through all blocks in the chain
         for block in self.chain:
             # Iterate through all transactions in each block
@@ -112,7 +143,8 @@ class Blockchain:
                 # Check if the wallet is the recipient
                 if transaction['recipient_address'] == address:
                     balance += transaction['value']
-
+        logger.debug(f" balance for the wallet ending with '{
+            address[-3:]}' is: {balance}")
         return balance
 
     def get_available_balance(self, address):
